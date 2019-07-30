@@ -2,10 +2,23 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const express = require('express');
 const engines = require('consolidate');
-var fs = require('fs');
+const handlebars = require('handlebars');
 var bodyParser = require('body-parser');
-var routes = require('./router');
+const cors = require('cors') ({ origin:true});
 
+handlebars.registerHelper("prettifyDate", function(timestamp) {
+    return new Date(timestamp).toString('yyyy-MM-dd')
+}); 
+
+handlebars.registerHelper('ifeq', function (a, b, options) {
+    if (a == b) { return options.fn(this); }
+    return options.inverse(this);
+});
+
+handlebars.registerHelper('ifnoteq', function (a, b, options) {
+    if (a != b) { return options.fn(this); }
+    return options.inverse(this);
+});
 
 const app = express();
 app.use(bodyParser.json());
@@ -53,7 +66,33 @@ const mergeSubCollectionFields = (subCollection) => {
 
 	return json;
 };
+app.get('/:id', jsonParser, (request, response, next) => {
+    var id = request.params.id;
+    let status = request.query.update;
+    console.log('req params' + id);
+    console.log('req status' + status);
+    var taskDetailRef = db.collection('task').doc(id);
+    var taskDetail = taskDetailRef.get()
+        .then( doc => {
+            let taskData = doc.data();
+            // console.log('taskData$$' + JSON.stringify(taskData));
+            taskData.id = id;
+            if(status&&status!=='') {
+                taskData.status = status;
+            }
+            taskData.id = id;
+            console.log('taskDataAFTER$$' + JSON.stringify(taskData));
+            response.render('taskdetail',{ taskData });
+            return true;
+        })
+        .catch(err => {
+            //response.send("500");
+            console.log("There is an error while fetching system user for "+err);
+            next(err);
+        });
+});
 
+/// API 
 app.get('/task', jsonParser, (request, response, next) => {
     var userRef = db.collection('task');
     var userDoc = userRef.get()
@@ -85,4 +124,26 @@ app.get('/task/:id', jsonParser, (request, response, next) => {
     return false;
 });
 
+app.post('/update', (req, res) => {
+    console.log('INSIDE UPDATE $$$$' + req.body);
+    let task_id = req.body.id;
+    console.log('task_id' + task_id);
+    var taskDetailRef = db.collection('task').doc(task_id);
+    var taskDetail = taskDetailRef.set(req.body)
+    .then(() => {
+        console.log("success");
+        res.redirect('/'+task_id+'?update=true');
+        res.end();
+        return true;
+    })
+    .catch((error) => {
+        console.error("failed ", error);
+        res.redirect('/'+task_id+'?update=false');
+        // res.send("failed");
+        res.end();
+    });
+    // res.send("success");
+    // res.end();
+    
+});
 exports.app = functions.https.onRequest(app);
