@@ -4,10 +4,11 @@ const express = require('express');
 const engines = require('consolidate');
 const handlebars = require('handlebars');
 var bodyParser = require('body-parser');
+var moment = require('moment');
 const cors = require('cors') ({ origin:true});
 
 handlebars.registerHelper("prettifyDate", (timestamp) => {
-    return new Date(timestamp);
+    return timestampHandler(timestamp);
 });
 handlebars.registerHelper('ifeq', function (a, b, options) {
     if (a === b) { return options.fn(this); }
@@ -65,58 +66,13 @@ const mergeSubCollectionFields = (subCollection) => {
 
 	return json;
 };
-function timestampHandler(timestamp, type) {
-    let time = "";
-    if (type === "BEGINTIME") {
-      time = "T00:00:00";
-    } else if (type === "ENDTIME") {
-      time = "T23:59:59";
-    } else if (type === "SPOTIFY") {
-      time = "T22:22:22";
-    }
-  
-    /* Checks if timestamp is not undefined and length is under 10
-      This to verify it is not complete unix ms timestamp or in format of YYYY-MM-DDTHH:MM
-    */
-    if (timestamp !== undefined && timestamp.toString().length <= 10) {
-      // If time is set, it will be added for START or END times * Used for day queries
-      if (time !== "") {
-        let fullTime = {};
-        fullTime["timestamp"] = firedate = admin.firestore.Timestamp.fromDate(
-          new Date(timestamp + time)
-        );
-        fullTime["weekday"] = weekday = moment(firedate.toDate()).isoWeekday();
-        fullTime["week"] = week = moment(firedate.toDate()).isoWeek();
-        fullTime["year"] = week = moment(firedate.toDate()).year();
-        return fullTime;
-      } else {
-        let fullTime = {};
-        fullTime["timestamp"] = firedate = admin.firestore.Timestamp.fromDate(
-          new Date(timestamp * 1000)
-        );
-        fullTime["weekday"] = weekday = moment(firedate.toDate()).isoWeekday();
-        fullTime["week"] = week = moment(firedate.toDate()).isoWeek();
-        fullTime["year"] = week = moment(firedate.toDate()).year();
-        return fullTime;
-      }
-    } else {
-      // Sets new timestamp from full unix timestamp or full date format of: YYYY-MM-DDTHH:MM
+function timestampHandler(timestamp) {
       let fullTime = {};
-      if (typeof timestamp === "number") {
-        fullTime["timestamp"] = firedate = admin.firestore.Timestamp.fromMillis(
-          timestamp
-        );
-      } else {
-        fullTime["timestamp"] = firedate = admin.firestore.Timestamp.fromDate(
-          new Date(timestamp)
-        );
-      }
-      fullTime["weekday"] = weekday = moment(firedate.toDate()).isoWeekday();
-      fullTime["week"] = week = moment(firedate.toDate()).isoWeek();
-      fullTime["year"] = week = moment(firedate.toDate()).year();
-  
+      fullTime["timestamp"] = firedate = admin.firestore.Timestamp.fromDate(
+        new Date(timestamp * 1000)
+      );
+      fullTime = moment(firedate.toDate()).format('MM/DD/YYYY h:m A');
       return fullTime;
-    }
   }
 
 app.get('/:id', jsonParser, (request, response, next) => {
@@ -136,7 +92,7 @@ app.get('/:id', jsonParser, (request, response, next) => {
             taskData.id = id;
             console.log('taskData.due ' + taskData.due);
             let time = timestampHandler(taskData.due);
-            console.log('time===' + time);
+            console.log('time===' + JSON.stringify(time));
             console.log('taskDataAFTER$$' + JSON.stringify(taskData));
             response.render('taskdetail',{ taskData });
             return true;
