@@ -20,6 +20,18 @@ handlebars.registerHelper('ifnoteq', function (a, b, options) {
     return options.inverse(this);
 });
 
+function epochToJsDate(ts){
+  // ts = epoch timestamp
+  // returns date obj
+  return new Date(ts*1000);
+}
+
+function jsDateToEpoch(d){
+  // d = javascript date obj
+  // returns epoch timestamp
+  return (d.getTime()-d.getMilliseconds())/1000;
+}
+
 const app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended:false}));
@@ -67,14 +79,22 @@ const mergeSubCollectionFields = (subCollection) => {
 	return json;
 };
 function timestampHandler(timestamp) {
-      let fullTime = {};
-      fullTime["timestamp"] = firedate = admin.firestore.Timestamp.fromDate(
-        new Date(timestamp * 1000)
+      let fullTime;
+      let firedate = admin.firestore.Timestamp.fromDate(
+        new Date(timestamp._seconds * 1000)
       );
       fullTime = moment(firedate.toDate()).format('MM/DD/YYYY h:m A');
       return fullTime;
-  }
-
+}
+function dateToFirebaseTimestamp(date) {
+  let fullTime = {};
+  let jsDate = new Date(date);
+  let timestampSecond = (jsDate.getTime()-jsDate.getMilliseconds())/1000;
+  fullTime._seconds = timestampSecond;
+  fullTime._nanoseconds = 0;
+  return fullTime;
+}
+console.log('dateToFirebaseTimestamp' + JSON.stringify(dateToFirebaseTimestamp('08/02/2019 11:00 AM')));
 app.get('/:id', jsonParser, (request, response, next) => {
     var id = request.params.id;
     let status = request.query.update;
@@ -90,7 +110,7 @@ app.get('/:id', jsonParser, (request, response, next) => {
                 taskData.status = status;
             }
             taskData.id = id;
-            console.log('taskData.due ' + taskData.due);
+            console.log('taskData.due ' + JSON.stringify(taskData.due));
             let time = timestampHandler(taskData.due);
             console.log('time===' + JSON.stringify(time));
             console.log('taskDataAFTER$$' + JSON.stringify(taskData));
@@ -141,6 +161,10 @@ app.post('/update', (req, res) => {
     let task_id = req.body.id;
     console.log('task_id' + task_id);
     var taskDetailRef = db.collection('task').doc(task_id);
+    let dueValue = req.body.due;
+    let dueTimeStamp = dateToFirebaseTimestamp(dueValue);
+    console.log('dueTimeStamp ' + JSON.stringify(dueTimeStamp));
+    req.body.due = dueTimeStamp;
     var taskDetail = taskDetailRef.set(req.body)
     .then(() => {
         console.log("success");
