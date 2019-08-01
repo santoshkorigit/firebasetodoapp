@@ -69,12 +69,12 @@
                                     <div class="form-group col-md-4">
                                         <label for="due">due</label>
                                         <input type="text" class="form-control" id="due" name="due"
-                                            value="{{taskData.due._seconds}}" placeholder="Enter due">
+                                            value="{{prettifyDate taskData.due._seconds}}" placeholder="Enter due">
                                     </div>
                                 </div>
                             </div>
-                            <button type="button" class="card-link btn btn-link">Delete</button>
                             <button type="submit" class="card-link btn btn-primary">Update</button>
+                            <button type="button" class="card-link btn btn-link">Delete</button>
                         </form>
                     </div>
                 </div>
