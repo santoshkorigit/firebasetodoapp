@@ -30,7 +30,7 @@ app.set('view engine', 'hbs');
 var urlEncodedParser = bodyParser.urlencoded({ extended : true});
 var jsonParser = bodyParser.json();
 
-var serviceAccount = require("./../serviceAccountKey.json");
+var serviceAccount = require("./serviceAccountKey.json");
 const firebaseApp = admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
     databaseURL: "https://smartytaskapp-5763b.firebaseio.com"
